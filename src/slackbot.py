@@ -1,5 +1,6 @@
 from slackclient import SlackClient
 from dotenv import load_dotenv
+from database import Database
 import os
 import random
 
@@ -8,6 +9,8 @@ load_dotenv()
 # Slack client
 slack_client = SlackClient(os.getenv("API_KEY"))
 
+# Db connection
+db = Database()
 
 INTENTS = {
     "hello": ['hello', 'bonjour', 'hey', 'hi', 'sup', 'morning', 'hola', 'ohai', 'yo']
