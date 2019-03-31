@@ -31,6 +31,7 @@ create table users (
 ## How it works
 The program is based on to two files `slackbot.py` and `database.py`.  
 In the first one, there is the all process of the chatbot. The program will read the user input and according several list of pattern (`hello`, `booking`, `information`...) will process it with an acceptable natural understanding.
+The other one will process all the communication between chatbot and the database.
 
 ### Commands examples
 
@@ -48,7 +49,8 @@ Given the name of a hotel, the program will return the available booking dates a
 
 #### Hotel booking
 Given a hotel name and available date, the program will save the reservation.
-At this moment, user can book for the same hotel for the same date, the API does not allow doing a booking.
+At this moment, user can book for the same hotel for the same date, the API does not allow doing a booking.  
+
 <img src="img/hotel-booking.png" width=400>
 
 #### List user bookings
