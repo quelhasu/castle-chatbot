@@ -29,6 +29,10 @@ create table users (
 ```
 
 ## Usage
+Chatbot needs an **API_KEY** from [SlackAPI](https://api.slack.com/) in `.env` file like:
+```js
+API_KEY="xoxb-XXXX"
+```
 Create the database file before starting if not exist then run the Python script:  
 ```bash
 > sqlite3 src/db/booking.db < src/db/booking.sql
