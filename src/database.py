@@ -3,6 +3,9 @@
 import sqlite3
 import datetime
 
+def bookings_dict(row):
+    return {"hotel": row[0], "created_at": row[1], "booking_date": row[2], "price": row[3]}
+
 class Database:
 
     def __init__(self):
@@ -19,9 +22,11 @@ class Database:
 
     def get_bookings(self, user_id):
       cursor = self.get_connection().cursor()
-      cursor.execute("""SELECT *
+      cursor.execute("""SELECT hotel_id, created_at, booking_for, price
                         FROM bookings
                         WHERE user_id = ?""", (user_id,))
+      bookings = cursor.fetchall()
+      return [bookings_dict(each) for each in bookings]
 
     def user_exist(self, user_id):
       cursor = self.get_connection().cursor()
@@ -35,12 +40,12 @@ class Database:
                           " values(?)"), (user_id,))
       connection.commit()
 
-    def create_booking(self, user_id, hotel_id, booking_date):
+    def create_booking(self, user_id, hotel_id, booking_date, price):
       now = datetime.datetime.now()
       co = self.get_connection()
       cursor = co.cursor()
       cursor.execute(("""INSERT INTO bookings(user_id, hotel_id,
-                      created_at, booking_for)"""
-                      " values(?,?,?,?)"), (user_id, hotel_id, now.strftime("%Y-%m-%d %H:%M"),
-                                              booking_date))
+                      created_at, booking_for, price)"""
+                      " values(?,?,?,?, ?)"), (user_id, hotel_id, now.strftime("%Y-%m-%d %H:%M"),
+                                              booking_date, price))
       co.commit()

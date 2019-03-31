@@ -18,7 +18,8 @@ db = Database()
 INTENTS = {
     "hello": ['hello', 'bonjour', 'hey', 'hi', 'sup', 'morning', 'hola', 'ohai', 'yo'],
     "booking": ['booking', 'book', 'reserve', 'go'],
-    "information": ['information', 'info', 'details']
+    "information": ['information', 'info', 'details'],
+    "user_info": ['my', 'previous']
 }
 
 r = requests.get("https://ancient-garden-79606.herokuapp.com/hotel/france")
@@ -64,6 +65,19 @@ def handle_command(channel, message, user):
         response, attachments = hotel_info(hotel)
         post_message(channel, response, json.dumps(attachments))
 
+    elif any(g in tokens for g in INTENTS.get("user_info")):
+        bookings = db.get_bookings(user)
+        if len(bookings) > 0:
+            response = "Here's your bookings:"
+            for booking in bookings:
+                hotel = list(filter(lambda x: x['id'] == booking['hotel'], hotels))[0]
+                response += "\n_"+booking['created_at']+"_: *"\
+                    +hotel['name']+"* the _"\
+                    +booking['booking_date']\
+                    +"_ for *"+booking['price']+"*"
+            post_message(channel, response)
+        else:
+            post_message(channel, "You do not have any booking for now!")
 
 def hotel_process(user, message):
     attachments = None
@@ -133,7 +147,7 @@ def book_hotel(when, hotel, user_id):
             for attr, value in obj['body'].items():
                 if("true" in value and re.findall(r"^\d+", value)[0] == when[1]):
                     response = "You've booked *{hotel}* on *{date}* for *{price}*!!".format(hotel=hotel[0]['name'], date=" ".join(when), price=re.findall(r"(\d*\s€)", value)[0])
-                    db.create_booking(user_id, hotel[0]['id'], " ".join(when))
+                    db.create_booking(user_id, hotel[0]['id'], when[1] + " " + obj['name'], re.findall(r"(\d*\s€)", value)[0])
                     booked = True
                     break
     if not response:
