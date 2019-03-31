@@ -18,8 +18,9 @@ db = Database()
 INTENTS = {
     "hello": ['hello', 'bonjour', 'hey', 'hi', 'sup', 'morning', 'hola', 'ohai', 'yo'],
     "booking": ['booking', 'book', 'reserve', 'go'],
-    "information": ['information', 'info', 'details', 'in'],
-    "user_info": ['my', 'previous']
+    "information": ['information', 'info', 'details', 'in', 'about'],
+    "user_info": ['my', 'previous'],
+    "best": ['best', 'lower', 'lowest', 'cheapest']
 }
 
 r = requests.get("https://ancient-garden-79606.herokuapp.com/hotel/france")
@@ -51,11 +52,8 @@ def handle_command(channel, message, user):
 
     elif any(g in tokens for g in INTENTS.get("booking")):
         if(db.user_exist(user) <= 0):
-            post_message(channel, "You're not registered in the database!")
             db.create_user(user)
-        else:
-            post_message(
-                channel, "Hey {mention}, you're in our database".format(mention=username))
+        
         response, attachments = hotel_process(user, message)
         post_message(channel, response, json.dumps(attachments))
 
@@ -83,8 +81,20 @@ def handle_command(channel, message, user):
         else:
             post_message(channel, "You do not have any booking for now!")
 
+    elif any(g in tokens for g in INTENTS.get("best")):
+        best_hotels = list(filter(lambda x: 'from_price' in x, hotels))
+        best_hotels.sort(key=lambda x: float(x['from_price'].replace(',', '.')))
+        response = "Here's the 5 best hotels:"
+        for hotel in best_hotels[0:5]:
+            response+= "\n*"+hotel['name']+"* from " + hotel['from_price'] + "€  => https://castle-client.herokuapp.com/h/france/" + hotel['id']
+        post_message(channel, response)
+    
+    else : 
+         post_message(channel,"Sorry, I do not understand the command..")
+
 def hotel_process(user, message):
     attachments = None
+    response = ""
     test_location = re.search(
         r"\b(in|of|at)\b ((?=\S*['-])([a-zA-Z'-]+)|\w+)", message)
     location = test_location.group(2) if test_location else None
@@ -136,7 +146,7 @@ def hotel_process(user, message):
         else:
             response = "Sorry this hotel does not exist in our database..."
     else:
-        print("list of best hotel")
+        response = "Sorry, I do not understand..."
     return response, attachments
 
 def book_hotel(when, hotel, user_id):
