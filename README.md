@@ -28,10 +28,19 @@ create table users (
 );
 ```
 
+## Usage
+Create the database file before starting if not exist then run the Python script:  
+```bash
+> sqlite3 src/db/booking.db < src/db/booking.sql
+...
+> python3 src/slackbot.py
+```
+
 ## How it works
 The program is based on to two files `slackbot.py` and `database.py`.  
 In the first one, there is the all process of the chatbot. The program will read the user input and according several list of pattern (`hello`, `booking`, `information`...) will process it with an acceptable natural understanding.
 The other one will process all the communication between chatbot and the database.
+
 
 ### Commands examples
 
