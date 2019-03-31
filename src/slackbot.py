@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 from database import Database
 import os
 import random
+import requests
+import re
+import json
 
 load_dotenv()
 
@@ -16,6 +19,9 @@ INTENTS = {
     "hello": ['hello', 'bonjour', 'hey', 'hi', 'sup', 'morning', 'hola', 'ohai', 'yo'],
     "booking": ['booking', 'book', 'reserve']
 }
+
+r = requests.get("https://ancient-garden-79606.herokuapp.com/hotel/france") 
+hotels = r.json()
 
 
 def parse_bot_commands(slack_events):
@@ -47,7 +53,24 @@ def handle_command(channel, message, user):
             db.create_user(user)
         else:
             post_message(channel, "Hey {mention}, you're in our database".format(mention=username))
+        response = book_hotel(user, message)
+        post_message(channel, response)
 
+
+def book_hotel(user, message):
+    test_location = re.search(r"\b(in|of|at)\b ((?=\S*['-])([a-zA-Z'-]+)|\w+)", message)
+    location = test_location.group(2) if test_location else None
+    # hotel = re.search(r"[^^](?:\s*\b([A-Z][a-z]+)\b)+", message).group()
+    # print(hotel)
+    if location:
+        response = "Here's available hotel in " + location + ":"
+        available = list(filter(lambda x: x['location']['address']['countryAddress'].lower() == location.lower(), hotels))
+        for hotel in available:
+             response += "\n\t" + hotel['name'] + " : " + 'https://castle-client.herokuapp.com/h/france/'+hotel['id']
+        return response
+    else :
+        print('hey')
+    
 
 def post_message(channel, response):
   """
