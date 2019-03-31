@@ -17,7 +17,7 @@ db = Database()
 
 INTENTS = {
     "hello": ['hello', 'bonjour', 'hey', 'hi', 'sup', 'morning', 'hola', 'ohai', 'yo'],
-    "booking": ['booking', 'book', 'reserve'],
+    "booking": ['booking', 'book', 'reserve', 'go'],
     "information": ['information', 'info', 'details']
 }
 
@@ -55,7 +55,7 @@ def handle_command(channel, message, user):
         else:
             post_message(
                 channel, "Hey {mention}, you're in our database".format(mention=username))
-        response, attachments = book_hotel(user, message)
+        response, attachments = hotel_process(user, message)
         post_message(channel, response, json.dumps(attachments))
 
     elif any(g in tokens for g in INTENTS.get("information")):
@@ -65,15 +65,17 @@ def handle_command(channel, message, user):
         post_message(channel, response, json.dumps(attachments))
 
 
-def book_hotel(user, message):
+def hotel_process(user, message):
     attachments = None
     test_location = re.search(
         r"\b(in|of|at)\b ((?=\S*['-])([a-zA-Z'-]+)|\w+)", message)
     location = test_location.group(2) if test_location else None
-    test_hotel = re.findall(
-        r"[^^]\b([A-Z][a-z']*)(\s[A-Z][a-z']*)*\b", message)
-    hotel = [
-        item for sublist in test_hotel for item in sublist] if test_hotel else None
+    test_hotel = re.findall(r"[^^]\b([A-Z][a-z']*)(\s[A-Z][a-z']*)*\b", message)
+    hotel = [item for sublist in test_hotel for item in sublist] if test_hotel else None
+    test_when = re.search(r"on\s(\w+)\s(\d+)", message)
+    when = test_when.groups() if test_when else None
+
+
     if location:
         available = list(filter(lambda x: x['location']['address']['countryAddress'].lower(
         ) == location.lower(), hotels))
@@ -87,48 +89,72 @@ def book_hotel(user, message):
             response = "There is *no hotel available* in {location}...".format(
                 location=location)
     elif hotel:
-        response, attachments = hotel_info(hotel)
-
+        hotel_to_book = list(filter(lambda x: all(s in x['name'] for s in hotel), hotels))
+        if(len(hotel_to_book) > 0):
+            attachments = [{
+                "title": hotel_to_book[0]['name'],
+                "title_link": 'https://castle-client.herokuapp.com/h/france/'+hotel_to_book[0]['id'],
+                "text": "You can have more detail here...",
+                "image_url": hotel_to_book[0]['media'],
+                "fields": [
+                    {
+                        "title": "Postal Code",
+                        "value": hotel_to_book[0]['location']['address']['postalCode'],
+                        "short": "true"
+                    },
+                    {
+                        "title": "MICHELIN",
+                        "value": hotel_to_book[0]["restaurant"]["michelin_rating"] + " stars",
+                        "short": "true"
+                    }
+                ],
+                "color": "#FFEEFF"
+            }]
+            if when:
+                response, booked = book_hotel(when, hotel_to_book, user)
+                if not booked : attachments = None
+            else:
+                response = hotel_info(hotel_to_book)
+        else:
+            response = "Sorry this hotel does not exist in our database..."
     else:
         print("list of best hotel")
     return response, attachments
 
+def book_hotel(when, hotel, user_id):
+    """
+    Process to allow a user to book a hotel if it's available
+    TODO Do not allow user to book one hotel on the same day
+    """
+    response = None
+    booked = False
+    for attr, obj in hotel[0]['disponibilites'].items():
+        if when[0].lower() in obj['name']:
+            for attr, value in obj['body'].items():
+                if("true" in value and re.findall(r"^\d+", value)[0] == when[1]):
+                    response = "You've booked *{hotel}* on *{date}* for *{price}*!!".format(hotel=hotel[0]['name'], date=" ".join(when), price=re.findall(r"(\d*\s€)", value)[0])
+                    db.create_booking(user_id, hotel[0]['id'], " ".join(when))
+                    booked = True
+                    break
+    if not response:
+        response = "Sorry, *{hotel}* is not available on *{date}*".format(hotel=hotel[0]['name'], date=" ".join(when))
+        response += "\nGet more information by sending: *_info {hotel name}_*"
+
+    return response, booked
 
 def hotel_info(hotel):
-    hotel_to_book = list(filter(lambda x: all(s in x['name'] for s in hotel), hotels))
-    if(len(hotel_to_book) > 0):
-        attachments = [{
-            "title": hotel_to_book[0]['name'],
-            "title_link": 'https://castle-client.herokuapp.com/h/france/'+hotel_to_book[0]['id'],
-            "text": "You can have more detail here...",
-            "image_url": hotel_to_book[0]['media'],
-            "fields": [
-                {
-                    "title": "Postal Code",
-                    "value": hotel_to_book[0]['location']['address']['postalCode'],
-                    "short": "true"
-                },
-                {
-                    "title": "MICHELIN",
-                    "value": hotel_to_book[0]["restaurant"]["michelin_rating"] + " stars",
-                    "short": "true"
-                }
-            ],
-            "color": "#FFEEFF"
-        }]
-        response = "Here's available *booking date*:"
-        for attr, obj in hotel_to_book[0]['disponibilites'].items():
-            response += "\n"+obj['name']+"\n"
-            i = 0
-            for attr, value in obj['body'].items():
-                if("true" in value):
-                    response += "\t\t• " + re.findall(r"(.*€)", value)[0]
-                    i += 1
-                    if i % 4 == 0:
-                        response += "\n"
-    else:
-        response = "Sorry this hotel does not exist in our database..."
-    return response, attachments
+    response = "Here's available *booking date*:"
+    for attr, obj in hotel[0]['disponibilites'].items():
+        response += "\n"+obj['name']+"\n"
+        i = 0
+        for attr, value in obj['body'].items():
+            if("true" in value):
+                response += "\t\t• " + re.findall(r"(.*€)", value)[0]
+                i += 1
+                if i % 4 == 0:
+                    response += "\n"
+    response += "\n\nIf you want to book this hotel please use this format: _month day_\n"
+    return response
 
 
 def post_message(channel, response, attachments=None):

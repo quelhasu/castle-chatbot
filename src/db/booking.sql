@@ -1,6 +1,6 @@
 create table bookings (
   id integer primary key,
-  user_id integer,
+  user_id varchar(80),
   hotel_id varchar(100),
   created_at text,
   booking_for text
