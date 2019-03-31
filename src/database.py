@@ -10,7 +10,7 @@ class Database:
 
     def get_connection(self):
         if self.connection is None:
-            self.connection = sqlite3.connect('db/booking.db')
+            self.connection = sqlite3.connect('src/db/booking.db')
         return self.connection
 
     def disconnect(self):
@@ -26,13 +26,13 @@ class Database:
     def user_exist(self, user_id):
       cursor = self.get_connection().cursor()
       cursor.execute("""SELECT id
-                        FROM users WHERE id = ?""", (user_id,))
+                        FROM users WHERE user_id = ?""", (user_id,))
       return len(cursor.fetchall())
 
-    def create_user(self, user_id, username):
+    def create_user(self, user_id):
       connection = self.get_connection()
-      connection.execute(("""INSERT INTO users(id, username)"""
-                          " values(?, ?)"), (user_id, username))
+      connection.execute(("""INSERT INTO users(user_id)"""
+                          " values(?)"), (user_id,))
       connection.commit()
 
     def create_booking(self, user_id, hotel_id, booking_date):

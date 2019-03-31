@@ -13,7 +13,8 @@ slack_client = SlackClient(os.getenv("API_KEY"))
 db = Database()
 
 INTENTS = {
-    "hello": ['hello', 'bonjour', 'hey', 'hi', 'sup', 'morning', 'hola', 'ohai', 'yo']
+    "hello": ['hello', 'bonjour', 'hey', 'hi', 'sup', 'morning', 'hola', 'ohai', 'yo'],
+    "booking": ['booking', 'book', 'reserve']
 }
 
 
@@ -39,6 +40,13 @@ def handle_command(channel, message, user):
     if any(g in tokens for g in INTENTS.get("hello")):
         post_message(channel, random.choice(
             ['Hey, {mention}...', 'Yo!', 'Hola {mention}', 'Bonjour!']).format(mention=username))
+
+    elif any(g in tokens for g in INTENTS.get("booking")):
+        if(db.user_exist(user)<=0):
+            post_message(channel, "You're not registered in the database!")
+            db.create_user(user)
+        else:
+            post_message(channel, "Hey {mention}, you're in our database".format(mention=username))
 
 
 def post_message(channel, response):

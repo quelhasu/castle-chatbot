@@ -8,5 +8,5 @@ create table bookings (
 
 create table users (
   id integer primary key,
-  username varchar(25)
+  user_id varchar(80) unique
 );
